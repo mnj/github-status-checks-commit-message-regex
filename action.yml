@@ -1,0 +1,12 @@
+name: 'github-status-checks-commit-message-regex'
+description: 'Check if commit message matches a regex pattern'
+author: 'Michael N. Jensen <michael.jensen@dustin.dk>'
+inputs:
+  pattern:
+    description: 'A regex pattern to check if a commit message is valid'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - run: python3 ${{ github.action_path }}/main.py "${{ inputs.pattern }}"
+      shell: bash
