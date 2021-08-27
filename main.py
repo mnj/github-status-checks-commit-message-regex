@@ -3,10 +3,12 @@ import re
 import sys
 import os
 import json
+import requests
 from distutils.util import strtobool
-# import Github
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
-# Script args:
+# Expected script args:
 # sys.argv[1] - Pattern (string)
 # sys.argv[2] - Check commit title (bool)
 # sys.argv[3] - Check commit body (bool)
@@ -25,24 +27,49 @@ github_token = sys.argv[6] if len(sys.argv) >= 7 else None
 
 ##### Functions #####
 def check_valid_title(pull_request_json):
-    # Check if there is a title element (first line of the git commit message)
     if "title" in pull_request_json:
         # Check that it's not set to null/empty
         if pull_request_json['title'] is not None:
-            regex_match = re.search(pattern, pull_request_json['title'])
-            return regex_match
+            return re.search(pattern, pull_request_json['title'])
         else:
             return False # Didn't contain anything/exist, so cant be valid
     else:
         raise SystemExit('Did not find the expected title elemment in the pull request event data!')
 
+def check_valid_title_from_api(github_commits_from_api_json):
+    if "commit" in github_commits_from_api_json:
+        if "message" in github_commits_from_api_json['commit']:
+            title = github_commits_from_api_json['commit']['message'].splitlines()[0]
+            
+            if title is not None:
+                return re.search(pattern, title)
+            else:
+                return False # Didn't contain anything/exist, so cant be valid
+
+def check_valid_body_from_api(github_commits_from_api_json):
+    if "commit" in github_commits_from_api_json:
+        if "message" in github_commits_from_api_json['commit']:
+            body = '\n'.join(github_commits_from_api_json['commit']['message'].splitlines()[1:])
+            
+            if body is not None:
+                return re.search(pattern, body)
+            else:
+                return False # Didn't contain anything/exist, so cant be valid
+
+def check_valid_message_from_api(github_commits_from_api_json):
+    if "commit" in github_commits_from_api_json:
+        if "message" in github_commits_from_api_json['commit']:
+            if github_commits_from_api_json['commit']['message'] is not None:
+                return re.search(pattern, github_commits_from_api_json['commit']['message'])
+            else:
+                return False # Didn't contain anything/exist, so cant be valid
+
 def check_valid_body(pull_request_json):
-    # Check if there is a body element (the rest of the commit message, excl the first line)
     if "body" in pull_request_json:
         # Check that it's not set to null/empty
         if pull_request_json['body'] is not None:
-            regex_match = re.search(pattern, pull_request_json['body'])
-            return regex_match
+            return re.search(pattern, pull_request_json['body'])
+            
         else:
             return False # Didn't contain anything/exist, so cant be valid
     else:
@@ -87,6 +114,25 @@ def get_pull_request_json():
     except:
         raise SystemExit('Unable to parse the pull request!')
 
+def get_github_commits_from_api(pull_request_json):
+    if "commits_url" in pull_request_json:
+        auth_headers = {"Authorization": f"token {github_token}"}
+
+        try:
+            session = requests.Session()
+            retries = Retry(total=10, backoff_factor=1, status_forcelist=[ 404, 429, 500, 502, 503, 504 ])
+            session.mount('https://', HTTPAdapter(max_retries=retries))
+
+            resp = session.get(pull_request_json['commits_url'], headers=auth_headers)
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                raise SystemExit('Recieved unknown response code from the Github REST API!')
+        except:
+            raise SystemExit('Could not talk to the Github API, gave up after 10 retries!')
+    else:
+        raise SystemExit('The event file did not contain a commits_url element!')
+
 ##### Main #####
 if __name__ == '__main__':
     valid_pull_request = True # Assume true, unless checks fail
@@ -94,7 +140,24 @@ if __name__ == '__main__':
     pull_request_json = get_pull_request_json()
     
     if check_all_commits:
-        pass
+        print("Fetching all commits with the Github REST API")
+
+        # Get a json list of commmits, they dont contain title/body, so we need to parse that ourself
+        github_api_commits = get_github_commits_from_api(pull_request_json)
+
+        # Go through each commit and see if they are valid
+        for commit in github_api_commits:
+            if check_commit_title:
+                if not check_valid_title_from_api(commit):
+                    valid_pull_request = False
+            
+            if check_commit_body:
+                if not check_valid_body_from_api(commit):
+                    valid_pull_request = False   
+            
+            if check_commit_message:
+                if not check_valid_title_from_api(commit):
+                    valid_pull_request = False
     else:
         # We can rely on just the pull request json without having to use PyGithub
         if check_commit_title:
