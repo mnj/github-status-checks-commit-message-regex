@@ -140,8 +140,6 @@ if __name__ == '__main__':
     pull_request_json = get_pull_request_json()
     
     if check_all_commits:
-        print("Fetching all commits with the Github REST API")
-
         # Get a json list of commmits, they dont contain title/body, so we need to parse that ourself
         github_api_commits = get_github_commits_from_api(pull_request_json)
 
@@ -156,7 +154,7 @@ if __name__ == '__main__':
                     valid_pull_request = False   
             
             if check_commit_message:
-                if not check_valid_title_from_api(commit):
+                if not check_valid_message_from_api(commit):
                     valid_pull_request = False
     else:
         # We can rely on just the pull request json without having to use PyGithub

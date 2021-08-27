@@ -27,7 +27,5 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: python3 -m pip install PyGithub
-      shell: bash
     - run: python3 ${{ github.action_path }}/main.py "${{ inputs.pattern }}" "${{ inputs.check_commit_title }}" "${{ inputs.check_commit_body }}" "${{ inputs.check_commit_message }}" "${{ inputs.check_all_commits }}" "${{ inputs.github_token }}" 
       shell: bash
