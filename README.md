@@ -27,7 +27,7 @@ jobs:
   runs-on: ubuntu-latest
   steps:
     - name: Check commit message
-      uses: mnj/github-status-checks-commit-message-regex@v1
+      uses: mnj/github-status-checks-commit-message-regex@v2.1
       with:
         pattern: '([A-Z][A-Z0-9]+-[0-9]+)' # Match all upper casee Jira ticket ids
 ```
@@ -43,7 +43,7 @@ jobs:
   runs-on: ubuntu-latest
   steps:
     - name: Check commit message
-      uses: mnj/github-status-checks-commit-message-regex@v1
+      uses: mnj/github-status-checks-commit-message-regex@v2.1
       with:
         pattern: '([A-Z][A-Z0-9]+-[0-9]+)' # Match all upper casee Jira ticket ids
         check_commit_title: 'false'
