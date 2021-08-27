@@ -1,12 +1,33 @@
 name: 'github-status-checks-commit-message-regex'
 description: 'Check if commit message matches a regex pattern'
 author: 'Michael N. Jensen <michael.jensen@dustin.dk>'
+
 inputs:
   pattern:
     description: 'A regex pattern to check if a commit message is valid'
     required: true
+  check_commit_title:
+    description: 'Check the commit title (first line)'
+    required: false
+    default: 'true'
+  check_commit_body:
+    description: 'Check the rest of the commit message, except title'
+    default: 'true'
+  check_commit_message:
+    description: 'Check if its in any part of the commit message'
+    default: 'false'
+  check_all_commits:
+    required: false
+    description: 'Check all indivual commit messages in the pull request'
+    default: 'false'
+  github_token:
+    required: false
+    description: 'The GITHUB_TOKEN required if checking all the commits in the pull request'
+
 runs:
   using: "composite"
   steps:
-    - run: python3 ${{ github.action_path }}/main.py "${{ inputs.pattern }}"
+    - run: python3 -m pip install PyGithub
+      shell: bash
+    - run: python3 ${{ github.action_path }}/main.py "${{ inputs.pattern }}" "${{ inputs.check_commit_title }}" "${{ inputs.check_commit_body }}" "${{ inputs.check_commit_message }}" "${{ inputs.check_all_commits }}" "${{ inputs.github_token }}" 
       shell: bash
